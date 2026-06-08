@@ -8,7 +8,7 @@ import { render } from './framework/render.js';
 
 const generateRandomString = () => Math.random().toString(36).substring(2, 15);
 const AUTHORIZATION = `Basic ${generateRandomString()}`;
-const END_POINT = 'https://24.objects.htmlacademy.pro/big-trip';
+const END_POINT = 'https://23.objects.htmlacademy.pro/big-trip';
 
 const pageHeaderElement = document.querySelector('.page-header');
 const tripControlsFilters = pageHeaderElement.querySelector('.trip-controls__filters');
@@ -53,20 +53,22 @@ function updateTripInfo() {
   render(tripInfoView, tripMainElement, 'afterbegin');
 }
 
-pointsModel.addObserver(() => {
-  updateTripInfo();
+pointsModel.addObserver((event) => {
+  if (event === 'TRIP_INFO' || event === 'INIT') {
+    updateTripInfo();
+  }
 });
 
 filterPresenter.init();
 tripPresenter.init();
 
-pointsModel.init().then(() => {
-  updateTripInfo();
+pointsModel.init().catch(() => {
 });
 
 const newEventButton = document.querySelector('.trip-main__event-add-btn');
 if (newEventButton) {
   newEventButton.addEventListener('click', () => {
+    newEventButton.disabled = true;
     tripPresenter.createPoint();
   });
 }

@@ -7,8 +7,8 @@ const BLANK_POINT = {
   id: null,
   type: 'flight',
   destination: '',
-  dateFrom: new Date(),
-  dateTo: new Date(),
+  dateFrom: null,
+  dateTo: null,
   basePrice: 0,
   offers: [],
   isFavorite: false
@@ -35,14 +35,34 @@ export default class EditFormView extends AbstractStatefulView {
     return this.#createTemplate(this._state);
   }
 
+  reset(originalPoint) {
+    this._setState(EditFormView.parsePointToState(originalPoint));
+    this._restoreHandlers();
+  }
+
+  #formatDateValue(date) {
+    if (!date) {
+      return '';
+    }
+    return humanizePointDate(date);
+  }
+
+  #formatTimeValue(date) {
+    if (!date) {
+      return '';
+    }
+    return humanizePointTime(date);
+  }
+
   #createTemplate(state) {
     const {type, destination: destinationId, dateFrom, dateTo, basePrice, offers: selectedOffers} = state;
     const destinationObj = this.#destinations.find((d) => d.id === destinationId);
+    const destinationName = destinationObj ? destinationObj.name : '';
 
-    const dateFromFormatted = humanizePointDate(dateFrom);
-    const dateToFormatted = humanizePointDate(dateTo);
-    const timeFromFormatted = humanizePointTime(dateFrom);
-    const timeToFormatted = humanizePointTime(dateTo);
+    const dateFromFormatted = dateFrom ? humanizePointDate(dateFrom) : '';
+    const dateToFormatted = dateTo ? humanizePointDate(dateTo) : '';
+    const timeFromFormatted = dateFrom ? humanizePointTime(dateFrom) : '';
+    const timeToFormatted = dateTo ? humanizePointTime(dateTo) : '';
 
     const types = ['taxi', 'bus', 'train', 'ship', 'drive', 'flight', 'check-in', 'sightseeing', 'restaurant'];
     const typeTemplate = types.map((t) => `
@@ -52,18 +72,16 @@ export default class EditFormView extends AbstractStatefulView {
       </div>
     `).join('');
 
-    const selectOptions = this.#destinations.map((dest) => `
-      <option value="${dest.id}" ${dest.id === destinationId ? 'selected' : ''}>${dest.name}</option>
-    `).join('');
-
+    const options = this.#destinations.map((dest) => `<option value="${dest.name}"></option>`).join('');
     const destinationTemplate = `
       <div class="event__field-group event__field-group--destination">
         <label class="event__label event__type-output" for="event-destination-1">
           ${type}
         </label>
-        <select class="event__input event__input--destination" id="event-destination-1" name="event-destination">
-          ${selectOptions}
-        </select>
+        <input class="event__input event__input--destination" id="event-destination-1" type="text" name="event-destination" value="${destinationName || ''}" list="destination-list-1" autocomplete="off">
+        <datalist id="destination-list-1">
+          ${options}
+        </datalist>
       </div>
     `;
 
@@ -74,8 +92,8 @@ export default class EditFormView extends AbstractStatefulView {
         <div class="event__available-offers">
           ${currentOffers.map((offer) => `
             <div class="event__offer-selector">
-              <input class="event__offer-checkbox visually-hidden" id="event-offer-${offer.id}" type="checkbox" name="event-offer-${offer.id}" ${selectedOffers.includes(offer.id) ? 'checked' : ''}>
-              <label class="event__offer-label" for="event-offer-${offer.id}">
+              <input class="event__offer-checkbox visually-hidden" id="event-offer-${offer.id}-1" type="checkbox" name="event-offer-${offer.id}" ${selectedOffers.includes(offer.id) ? 'checked' : ''}>
+              <label class="event__offer-label" for="event-offer-${offer.id}-1">
                 <span class="event__offer-title">${offer.title}</span>
                 &plus;&euro;&nbsp;
                 <span class="event__offer-price">${offer.price}</span>
@@ -86,21 +104,39 @@ export default class EditFormView extends AbstractStatefulView {
       </section>
     ` : '';
 
-    const destinationDetailsTemplate = destinationObj?.description ? `
-      <section class="event__section event__section--destination">
-        <h3 class="event__section-title event__section-title--destination">Destination</h3>
-        <p class="event__destination-description">${destinationObj.description}</p>
-        <div class="event__photos-container">
-          <div class="event__photos-tape">
-            ${destinationObj.pictures.map((pic) => `
-              <img class="event__photo" src="${pic.src}" alt="${pic.description}">
-            `).join('')}
-          </div>
-        </div>
-      </section>
-    ` : '';
+    const hasPhotos = destinationObj?.pictures && destinationObj.pictures.length > 0;
+    let destinationDetailsTemplate = '';
+
+    if (destinationObj?.description || hasPhotos) {
+      destinationDetailsTemplate = `
+        <section class="event__section event__section--destination">
+          <h3 class="event__section-title event__section-title--destination">Destination</h3>
+          ${destinationObj?.description ? `<p class="event__destination-description">${destinationObj.description}</p>` : ''}
+          ${hasPhotos ? `
+            <div class="event__photos-container">
+              <div class="event__photos-tape">
+                ${destinationObj.pictures.map((pic) => `
+                  <img class="event__photo" src="${pic.src}" alt="${pic.description}">
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </section>
+      `;
+    }
 
     const buttonText = this.#isNewPoint ? 'Cancel' : 'Delete';
+    const rollupButton = !this.#isNewPoint ? '<button class="event__rollup-btn" type="button"><span class="visually-hidden">Open event</span></button>' : '';
+
+    let startTimeValue = '';
+    let endTimeValue = '';
+
+    if (dateFromFormatted && timeFromFormatted) {
+      startTimeValue = `${dateFromFormatted} ${timeFromFormatted}`;
+    }
+    if (dateToFormatted && timeToFormatted) {
+      endTimeValue = `${dateToFormatted} ${timeToFormatted}`;
+    }
 
     return `
       <li class="trip-events__item">
@@ -122,10 +158,10 @@ export default class EditFormView extends AbstractStatefulView {
             ${destinationTemplate}
             <div class="event__field-group event__field-group--time">
               <label class="visually-hidden" for="event-start-time-1">From</label>
-              <input class="event__input event__input--time" id="event-start-time-1" type="text" name="event-start-time" value="${dateFromFormatted} ${timeFromFormatted}" placeholder="DD/MM/YY HH:MM">
+              <input class="event__input event__input--time" id="event-start-time-1" type="text" name="event-start-time" value="${startTimeValue}" placeholder="DD/MM/YY HH:MM">
               &mdash;
               <label class="visually-hidden" for="event-end-time-1">To</label>
-              <input class="event__input event__input--time" id="event-end-time-1" type="text" name="event-end-time" value="${dateToFormatted} ${timeToFormatted}" placeholder="DD/MM/YY HH:MM">
+              <input class="event__input event__input--time" id="event-end-time-1" type="text" name="event-end-time" value="${endTimeValue}" placeholder="DD/MM/YY HH:MM">
             </div>
             <div class="event__field-group event__field-group--price">
               <label class="event__label" for="event-price-1">
@@ -136,7 +172,7 @@ export default class EditFormView extends AbstractStatefulView {
             </div>
             <button class="event__save-btn btn btn--blue" type="submit">Save</button>
             <button class="event__reset-btn" type="reset">${buttonText}</button>
-            ${!this.#isNewPoint ? '<button class="event__rollup-btn" type="button"><span class="visually-hidden">Open event</span></button>' : ''}
+            ${rollupButton}
           </header>
           <section class="event__details">
             ${offersTemplate}
@@ -206,12 +242,12 @@ export default class EditFormView extends AbstractStatefulView {
     }
   };
 
-  #destinationChangeHandler = (evt) => {
-    evt.preventDefault();
-    const newDestinationId = evt.target.value;
-    if (newDestinationId !== this._state.destination) {
+  #destinationInputHandler = (evt) => {
+    const selectedCity = evt.target.value;
+    const destination = this.#destinations.find((d) => d.name === selectedCity);
+    if (destination && destination.id !== this._state.destination) {
       this.updateElement({
-        destination: newDestinationId
+        destination: destination.id
       });
     }
   };
@@ -227,20 +263,25 @@ export default class EditFormView extends AbstractStatefulView {
   };
 
   #offersChangeHandler = (evt) => {
-    if (evt.target.classList.contains('event__offer-checkbox')) {
+    const target = evt.target;
+    if (target.classList.contains('event__offer-checkbox')) {
       evt.preventDefault();
-      const offerId = evt.target.id.replace('event-offer-', '');
-      let updatedOffers = [...this._state.offers];
+      const match = target.id.match(/event-offer-(.+)-1/);
+      const offerId = match ? match[1] : null;
 
-      if (evt.target.checked) {
-        if (!updatedOffers.includes(offerId)) {
-          updatedOffers.push(offerId);
+      if (offerId) {
+        let updatedOffers = [...(this._state.offers || [])];
+
+        if (target.checked) {
+          if (!updatedOffers.includes(offerId)) {
+            updatedOffers.push(offerId);
+          }
+        } else {
+          updatedOffers = updatedOffers.filter((id) => id !== offerId);
         }
-      } else {
-        updatedOffers = updatedOffers.filter((id) => id !== offerId);
-      }
 
-      this.updateElement({offers: updatedOffers});
+        this.updateElement({offers: updatedOffers});
+      }
     }
   };
 
@@ -277,36 +318,43 @@ export default class EditFormView extends AbstractStatefulView {
   _restoreHandlers() {
     const form = this.element.querySelector('form');
     if (form) {
+      form.removeEventListener('submit', this.#formSubmitHandler);
       form.addEventListener('submit', this.#formSubmitHandler);
     }
 
     const typeInputs = this.element.querySelectorAll('.event__type-input');
     typeInputs.forEach((input) => {
+      input.removeEventListener('change', this.#typeChangeHandler);
       input.addEventListener('change', this.#typeChangeHandler);
     });
 
-    const destinationSelect = this.element.querySelector('.event__input--destination');
-    if (destinationSelect) {
-      destinationSelect.addEventListener('change', this.#destinationChangeHandler);
+    const destinationInput = this.element.querySelector('.event__input--destination');
+    if (destinationInput) {
+      destinationInput.removeEventListener('change', this.#destinationInputHandler);
+      destinationInput.addEventListener('change', this.#destinationInputHandler);
     }
 
     const priceInput = this.element.querySelector('.event__input--price');
     if (priceInput) {
+      priceInput.removeEventListener('change', this.#priceChangeHandler);
       priceInput.addEventListener('change', this.#priceChangeHandler);
     }
 
     const offersContainer = this.element.querySelector('.event__available-offers');
     if (offersContainer) {
+      offersContainer.removeEventListener('change', this.#offersChangeHandler);
       offersContainer.addEventListener('change', this.#offersChangeHandler);
     }
 
     const resetBtn = this.element.querySelector('.event__reset-btn');
     if (resetBtn) {
+      resetBtn.removeEventListener('click', this.#resetHandler);
       resetBtn.addEventListener('click', this.#resetHandler);
     }
 
     const rollupBtn = this.element.querySelector('.event__rollup-btn');
     if (rollupBtn) {
+      rollupBtn.removeEventListener('click', this.#rollupClickHandler);
       rollupBtn.addEventListener('click', this.#rollupClickHandler);
     }
 
@@ -327,13 +375,14 @@ export default class EditFormView extends AbstractStatefulView {
 
   setEscKeyHandler(callback) {
     this._callbacks.escKey = callback;
+    document.removeEventListener('keydown', this.#escKeyHandler);
     document.addEventListener('keydown', this.#escKeyHandler);
   }
 
   setFocus() {
-    const destinationSelect = this.element.querySelector('.event__input--destination');
-    if (destinationSelect) {
-      destinationSelect.focus();
+    const destinationInput = this.element.querySelector('.event__input--destination');
+    if (destinationInput) {
+      destinationInput.focus();
     }
   }
 
@@ -354,19 +403,28 @@ export default class EditFormView extends AbstractStatefulView {
         form.style.animation = '';
       }, {once: true});
     }
-
   }
 
   static parsePointToState(point) {
+    let dateFrom = null;
+    let dateTo = null;
+
+    if (point.dateFrom) {
+      dateFrom = point.dateFrom instanceof Date ? point.dateFrom : new Date(point.dateFrom);
+    }
+    if (point.dateTo) {
+      dateTo = point.dateTo instanceof Date ? point.dateTo : new Date(point.dateTo);
+    }
+
     return {
       id: point.id,
       type: point.type,
       destination: point.destination,
-      dateFrom: point.dateFrom instanceof Date ? point.dateFrom : new Date(point.dateFrom),
-      dateTo: point.dateTo instanceof Date ? point.dateTo : new Date(point.dateTo),
+      dateFrom: dateFrom,
+      dateTo: dateTo,
       basePrice: point.basePrice,
-      offers: [...point.offers],
-      isFavorite: point.isFavorite
+      offers: [...(point.offers || [])],
+      isFavorite: point.isFavorite || false
     };
   }
 
@@ -378,8 +436,8 @@ export default class EditFormView extends AbstractStatefulView {
       dateFrom: state.dateFrom,
       dateTo: state.dateTo,
       basePrice: state.basePrice,
-      offers: [...state.offers],
-      isFavorite: state.isFavorite
+      offers: [...(state.offers || [])],
+      isFavorite: state.isFavorite || false
     };
   }
 }

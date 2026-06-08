@@ -7,47 +7,76 @@ function getRandomArrayElement(items) {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-// Добавляем недостающую функцию
 function getRandomInteger(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function humanizePointDate(date) {
-  return date ? dayjs(date).format(DATE_FORMAT) : '';
+  if (!date) {
+    return '';
+  }
+  return dayjs(date).format(DATE_FORMAT);
 }
 
 function humanizePointTime(date) {
-  return date ? dayjs(date).format(TIME_FORMAT) : '';
+  if (!date) {
+    return '';
+  }
+  return dayjs(date).format(TIME_FORMAT);
+}
+
+function formatTimePart(value) {
+  return String(value).padStart(2, '0');
 }
 
 function getDuration(dateFrom, dateTo) {
+  if (!dateFrom || !dateTo) {
+    return '';
+  }
+
   const start = dayjs(dateFrom);
   const end = dayjs(dateTo);
-  const diff = end.diff(start, 'minute');
+  const totalMinutes = end.diff(start, 'minute');
 
-  if (diff < 60) {
-    return `${diff}M`;
-  } else if (diff < 1440) {
-    const hours = Math.floor(diff / 60);
-    const minutes = diff % 60;
-    return `${hours}H ${minutes}M`;
-  } else {
-    const days = Math.floor(diff / 1440);
-    const hours = Math.floor((diff % 1440) / 60);
-    const minutes = diff % 60;
-    return `${days}D ${hours}H ${minutes}M`;
+  if (totalMinutes < 60) {
+    return `${totalMinutes}M`;
   }
+
+  let durationString = '';
+
+  if (totalMinutes < 1440) {
+    const hoursUnderDay = Math.floor(totalMinutes / 60);
+    const minutesUnderDay = totalMinutes % 60;
+    durationString = `${formatTimePart(hoursUnderDay)}H ${formatTimePart(minutesUnderDay)}M`;
+  } else {
+    const daysOver = Math.floor(totalMinutes / 1440);
+    const remainingMinutes = totalMinutes % 1440;
+    const hoursOver = Math.floor(remainingMinutes / 60);
+    const minutesOver = remainingMinutes % 60;
+    durationString = `${formatTimePart(daysOver)}D ${formatTimePart(hoursOver)}H ${formatTimePart(minutesOver)}M`;
+  }
+
+  return durationString;
 }
 
 function isPointFuture(dateFrom) {
+  if (!dateFrom) {
+    return false;
+  }
   return dayjs().isBefore(dateFrom);
 }
 
 function isPointPast(dateTo) {
+  if (!dateTo) {
+    return false;
+  }
   return dayjs().isAfter(dateTo);
 }
 
 function isPointPresent(dateFrom, dateTo) {
+  if (!dateFrom || !dateTo) {
+    return false;
+  }
   return dayjs().isAfter(dateFrom) && dayjs().isBefore(dateTo);
 }
 

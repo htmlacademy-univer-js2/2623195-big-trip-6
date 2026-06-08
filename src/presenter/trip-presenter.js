@@ -41,6 +41,9 @@ export default class TripPresenter {
     if (this.#isCreating) {
       return;
     }
+
+    this.#pointPresenters.forEach((presenter) => presenter.resetView());
+
     this.#isCreating = true;
 
     this.#filterModel.setFilter('MAJOR', FilterType.EVERYTHING);
@@ -50,7 +53,7 @@ export default class TripPresenter {
 
     setTimeout(() => {
       this.#openCreateForm();
-    }, 50);
+    }, 100);
   }
 
   #openCreateForm() {
@@ -62,8 +65,8 @@ export default class TripPresenter {
       id: null,
       type: 'flight',
       destination: '',
-      dateFrom: new Date(),
-      dateTo: new Date(),
+      dateFrom: null,
+      dateTo: null,
       basePrice: 0,
       offers: [],
       isFavorite: false
@@ -76,6 +79,12 @@ export default class TripPresenter {
     });
 
     this.#newPointPresenter.init(blankPoint, this.#destinations, this.#offers, true);
+
+    const container = this.#tripEventsListComponent.element;
+    if (container.children.length > 1) {
+      const formElement = container.lastChild;
+      container.insertBefore(formElement, container.firstChild);
+    }
   }
 
   #closeCreateForm() {
@@ -84,10 +93,14 @@ export default class TripPresenter {
       this.#newPointPresenter = null;
     }
     this.#isCreating = false;
+
+    const newEventButton = document.querySelector('.trip-main__event-add-btn');
+    if (newEventButton) {
+      newEventButton.disabled = false;
+    }
   }
 
   #handleModelEvent = () => {
-
     this.#renderBoard();
   };
 
@@ -162,6 +175,10 @@ export default class TripPresenter {
       remove(this.#emptyPointsComponent);
       this.#emptyPointsComponent = null;
     }
+    if (this.#sortComponent) {
+      remove(this.#sortComponent);
+      this.#sortComponent = null;
+    }
     this.#tripEventsContainer.innerHTML = '';
   }
 
@@ -181,31 +198,22 @@ export default class TripPresenter {
     const filterType = this.#filterModel.filter;
     const now = new Date();
 
-    let result;
     switch (filterType) {
       case FilterType.FUTURE:
-        result = points.filter((point) => new Date(point.dateFrom) > now);
-        break;
+        return points.filter((point) => point.dateFrom && new Date(point.dateFrom) > now);
       case FilterType.PRESENT:
-        result = points.filter((point) =>
+        return points.filter((point) =>
+          point.dateFrom && point.dateTo &&
           new Date(point.dateFrom) <= now && new Date(point.dateTo) >= now
         );
-        break;
       case FilterType.PAST:
-        result = points.filter((point) => new Date(point.dateTo) < now);
-        break;
+        return points.filter((point) => point.dateTo && new Date(point.dateTo) < now);
       default:
-        result = [...points];
+        return [...points];
     }
-
-    return result;
   }
 
   #renderSort() {
-    if (this.#sortComponent !== null) {
-      remove(this.#sortComponent);
-    }
-
     this.#sortComponent = new SortView({
       currentSortType: this.#currentSortType,
       onSortTypeChange: (sortType) => {
@@ -240,9 +248,6 @@ export default class TripPresenter {
   }
 
   #renderEmptyPoints() {
-    if (this.#emptyPointsComponent) {
-      remove(this.#emptyPointsComponent);
-    }
     this.#emptyPointsComponent = new EmptyPointsView({filterType: this.#filterModel.filter});
     render(this.#emptyPointsComponent, this.#tripEventsContainer);
   }

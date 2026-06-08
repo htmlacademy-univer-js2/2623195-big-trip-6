@@ -1,6 +1,7 @@
 import AbstractView from '../framework/view/abstract-view.js';
 
 function createTripInfoTemplate(destinations, dateFrom, dateTo, totalPrice) {
+
   let routeText = '';
   if (destinations.length === 1) {
     routeText = destinations[0];
@@ -29,7 +30,7 @@ function createTripInfoTemplate(destinations, dateFrom, dateTo, totalPrice) {
     <div class="trip-info">
       <h1 class="trip-info__title">${routeText}</h1>
       <p class="trip-info__dates">${formatDateRange(dateFrom, dateTo)}</p>
-      <p class="trip-info__cost">€ ${totalPrice}</p>
+      <p class="trip-info__cost">€ <span class="trip-info__cost-value">${totalPrice}</span></p>
     </div>
   `;
 }

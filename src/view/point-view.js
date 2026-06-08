@@ -5,22 +5,24 @@ export default class RoutePointView extends AbstractView {
   constructor({point, destination, offers}) {
     super();
     this._point = point;
-    this._destination = destination || { name: '' }; // Защита от undefined
-    this._offers = offers;
+    this._destination = destination || { name: '' };
+    this._allOffers = offers || {};
     this._callbacks = {};
   }
 
   get template() {
-    const {type, basePrice, dateFrom, dateTo, isFavorite} = this._point;
-    const destinationName = this._destination?.name || ''; // Защита от undefined
+    const {type, basePrice, dateFrom, dateTo, isFavorite, offers: selectedOfferIds} = this._point;
+    const destinationName = this._destination?.name || '';
 
     const date = humanizePointDate(dateFrom);
     const startTime = humanizePointTime(dateFrom);
     const endTime = humanizePointTime(dateTo);
     const duration = getDuration(dateFrom, dateTo);
 
-    const selectedOffers = this._offers
-      .filter((offer) => this._point.offers.includes(offer.id))
+    const offersForType = this._allOffers[type] || [];
+
+    const selectedOffers = offersForType
+      .filter((offer) => selectedOfferIds && selectedOfferIds.includes(offer.id))
       .map((offer) => `
         <li class="event__offer">
           <span class="event__offer-title">${offer.title}</span>
@@ -90,3 +92,4 @@ export default class RoutePointView extends AbstractView {
     this._callbacks.favoriteClick?.();
   };
 }
+

@@ -48,17 +48,19 @@ export default class PointPresenter {
     this.#pointComponent = new RoutePointView({
       point: this.#point,
       destination: this.#getDestination(),
-      offers: this.#getPointOffers(),
+      offers: this.#offers,
     });
 
     this.#setPointHandlers();
 
     if (oldPointComponent && oldPointComponent.element.parentElement) {
       replace(this.#pointComponent, oldPointComponent);
-    } else {
+    } else if (oldPointComponent) {
       render(this.#pointComponent, this.#container);
     }
-    remove(oldPointComponent);
+    if (oldPointComponent) {
+      remove(oldPointComponent);
+    }
   }
 
   destroy() {
@@ -66,8 +68,8 @@ export default class PointPresenter {
       remove(this.#pointComponent);
     }
     if (this.#editFormComponent) {
-      remove(this.#editFormComponent);
       this.#editFormComponent.removeEscKeyHandler();
+      remove(this.#editFormComponent);
     }
   }
 
@@ -81,7 +83,7 @@ export default class PointPresenter {
     this.#pointComponent = new RoutePointView({
       point: this.#point,
       destination: this.#getDestination(),
-      offers: this.#getPointOffers(),
+      offers: this.#offers,
     });
 
     this.#editFormComponent = new EditFormView({
@@ -121,7 +123,7 @@ export default class PointPresenter {
       return false;
     }
 
-    if (new Date(point.dateTo) < new Date(point.dateFrom)) {
+    if (point.dateTo && point.dateFrom && new Date(point.dateTo) < new Date(point.dateFrom)) {
       return false;
     }
 
@@ -134,16 +136,6 @@ export default class PointPresenter {
     }
 
     return true;
-  }
-
-  #getOffersIds(offersTitles, pointType) {
-    const offersForType = this.#offers[pointType] || [];
-    return offersTitles
-      .map((offerTitle) => {
-        const offer = offersForType.find((o) => o.title === offerTitle);
-        return offer ? offer.id : null;
-      })
-      .filter((id) => id !== null);
   }
 
   #setFormHandlers() {
@@ -162,27 +154,25 @@ export default class PointPresenter {
 
       try {
         if (this.#isNewPoint) {
-          // Преобразуем названия опций в ID
-          const offerIds = this.#getOffersIds(
-            updatedPoint.offers || [],
-            updatedPoint.type
-          );
-
           const newPoint = {
             id: null,
             type: updatedPoint.type || 'flight',
-            destination: updatedPoint.destination, // Отправляем ID города
-            dateFrom: updatedPoint.dateFrom || new Date(),
-            dateTo: updatedPoint.dateTo || new Date(),
+            destination: updatedPoint.destination,
+            dateFrom: updatedPoint.dateFrom || null,
+            dateTo: updatedPoint.dateTo || null,
             basePrice: updatedPoint.basePrice || 0,
-            offers: offerIds,
+            offers: updatedPoint.offers || [],
             isFavorite: updatedPoint.isFavorite || false,
           };
           await this.#handleDataChange(newPoint, 'add');
         } else {
           await this.#handleDataChange(updatedPoint, 'update');
         }
-        this.#destroy();
+        if (this.#isNewPoint) {
+          this.destroy();
+        } else {
+          this.#replaceFormToPoint();
+        }
       } catch (err) {
         this.#setButtonsDisabled(false);
         this.#editFormComponent.shake();
@@ -195,15 +185,16 @@ export default class PointPresenter {
         return;
       }
 
+      if (this.#isNewPoint) {
+        this.destroy();
+        return;
+      }
+
       this.#isSaving = true;
       this.#setButtonsDisabled(true);
 
       try {
-        if (this.#isNewPoint) {
-          this.#destroy();
-        } else {
-          await this.#handleDataChange(this.#point.id, 'delete');
-        }
+        await this.#handleDataChange(this.#point.id, 'delete');
       } catch (err) {
         this.#setButtonsDisabled(false);
         this.#editFormComponent.shake();
@@ -213,28 +204,26 @@ export default class PointPresenter {
 
     this.#editFormComponent.setRollupClickHandler(() => {
       if (this.#isNewPoint) {
-        this.#destroy();
+        this.destroy();
       } else {
+        this.#editFormComponent.reset(this.#point);
         this.#replaceFormToPoint();
       }
     });
 
     this.#editFormComponent.setEscKeyHandler(() => {
       if (this.#isNewPoint) {
-        this.#destroy();
+        this.destroy();
       } else {
+        this.#editFormComponent.reset(this.#point);
         this.#replaceFormToPoint();
       }
     });
   }
 
   #setButtonsDisabled(isDisabled) {
-    const saveBtn = this.#editFormComponent.element.querySelector(
-      '.event__save-btn'
-    );
-    const deleteBtn = this.#editFormComponent.element.querySelector(
-      '.event__reset-btn'
-    );
+    const saveBtn = this.#editFormComponent.element.querySelector('.event__save-btn');
+    const deleteBtn = this.#editFormComponent.element.querySelector('.event__reset-btn');
 
     if (saveBtn) {
       saveBtn.disabled = isDisabled;
@@ -246,35 +235,16 @@ export default class PointPresenter {
     }
   }
 
-  #destroy() {
-    if (this.#pointComponent) {
-      remove(this.#pointComponent);
-    }
-    if (this.#editFormComponent) {
-      remove(this.#editFormComponent);
-      this.#editFormComponent.removeEscKeyHandler();
-    }
-    if (this.#isNewPoint) {
-      this.#handleModeChange();
-    }
-  }
-
   #getDestination() {
     if (!this.#point.destination) {
       return { name: '' };
     }
-    return (
-      this.#destinations.find((dest) => dest.id === this.#point.destination) || {
-        name: '',
-      }
-    );
+    return this.#destinations.find((dest) => dest.id === this.#point.destination) || { name: '' };
   }
 
   #getPointOffers() {
     const offersForType = this.#offers[this.#point.type] || [];
-    return offersForType.filter((offer) =>
-      this.#point.offers.includes(offer.id)
-    );
+    return offersForType.filter((offer) => this.#point.offers && this.#point.offers.includes(offer.id));
   }
 
   #replacePointToForm() {
@@ -282,22 +252,29 @@ export default class PointPresenter {
       return;
     }
     this.#handleModeChange();
-    replace(this.#editFormComponent, this.#pointComponent);
-    this.#isEditFormOpen = true;
-    this.#editFormComponent.setFocus();
+    if (this.#editFormComponent && this.#pointComponent && this.#pointComponent.element.parentElement) {
+      replace(this.#editFormComponent, this.#pointComponent);
+      this.#isEditFormOpen = true;
+      this.#editFormComponent.setFocus();
+    } else {
+      render(this.#editFormComponent, this.#container);
+      this.#isEditFormOpen = true;
+      this.#editFormComponent.setFocus();
+    }
   }
 
   #replaceFormToPoint() {
     if (!this.#isEditFormOpen) {
       return;
     }
-    if (
-      this.#editFormComponent &&
-      this.#editFormComponent.element.parentElement
-    ) {
+    const parentElement = this.#editFormComponent?.element?.parentElement;
+    if (parentElement && this.#pointComponent) {
       replace(this.#pointComponent, this.#editFormComponent);
       this.#isEditFormOpen = false;
       this.#editFormComponent.removeEscKeyHandler();
+    } else if (this.#pointComponent) {
+      render(this.#pointComponent, this.#container);
+      this.#isEditFormOpen = false;
     }
   }
 }

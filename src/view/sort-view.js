@@ -53,13 +53,19 @@ export default class SortView extends AbstractView {
   }
 
   #sortClickHandler = (evt) => {
-    const target = evt.target.closest('.trip-sort__input');
-    if (!target || target.disabled) {
+    const label = evt.target.closest('.trip-sort__btn');
+    if (!label) {
       return;
     }
 
-    const sortType = target.dataset.sortType;
+    const div = label.closest('.trip-sort__item');
+    const input = div?.querySelector('.trip-sort__input');
 
+    if (!input || input.disabled) {
+      return;
+    }
+
+    const sortType = input.dataset.sortType;
     if (sortType && sortType !== this.#currentSortType) {
       this.#handleSortTypeChange(sortType);
     }

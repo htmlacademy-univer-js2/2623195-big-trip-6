@@ -78,6 +78,7 @@ export default class FilterPresenter {
   };
 
   #handleModelEvent = () => {
+    this.#currentFilter = this.#filterModel.filter;
     this.#renderFilter();
   };
 

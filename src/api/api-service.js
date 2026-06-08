@@ -16,7 +16,6 @@ export default class ApiService {
       { method, body, headers },
     );
 
-
     if (!response.ok) {
       throw new Error(`${response.status}: ${response.statusText}`);
     }

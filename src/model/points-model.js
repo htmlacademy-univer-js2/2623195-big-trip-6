@@ -28,17 +28,16 @@ export default class PointsModel extends Observable {
       this.#points = points;
       this.#destinations = destinations;
       this.#offers = offers;
-
-      this._notify('INIT');
-      this._notify('MAJOR');
     } catch (err) {
       this.#hasError = true;
       this.#points = [];
       this.#destinations = [];
       this.#offers = {};
-      this._notify('INIT');
     } finally {
       this.#isLoading = false;
+      this._notify('INIT');
+      this._notify('MAJOR');
+      this._notify('TRIP_INFO');
     }
   }
 
@@ -83,8 +82,10 @@ export default class PointsModel extends Observable {
   }
 
   getTripDestinations() {
+    const sortedPoints = [...this.#points].sort((a, b) => new Date(a.dateFrom) - new Date(b.dateFrom));
     const uniqueDestinations = [];
-    for (const point of this.#points) {
+
+    for (const point of sortedPoints) {
       const destination = this.#destinations.find((d) => d.id === point.destination);
       if (destination && !uniqueDestinations.includes(destination.name)) {
         uniqueDestinations.push(destination.name);
@@ -132,6 +133,7 @@ export default class PointsModel extends Observable {
       this._notify(updateType, response);
       this._notify('TRIP_INFO');
     }
+    return response;
   }
 
   async addPoint(updateType, newPoint) {
@@ -139,6 +141,7 @@ export default class PointsModel extends Observable {
     this.#points.push(response);
     this._notify(updateType, response);
     this._notify('TRIP_INFO');
+    return response;
   }
 
   async deletePoint(updateType, pointId) {
@@ -156,13 +159,14 @@ export default class PointsModel extends Observable {
 
     switch (this.#activeFilter) {
       case 'future':
-        return this.#points.filter((point) => new Date(point.dateFrom) > now);
+        return this.#points.filter((point) => point.dateFrom && new Date(point.dateFrom) > now);
       case 'present':
         return this.#points.filter((point) =>
+          point.dateFrom && point.dateTo &&
           new Date(point.dateFrom) <= now && new Date(point.dateTo) >= now
         );
       case 'past':
-        return this.#points.filter((point) => new Date(point.dateTo) < now);
+        return this.#points.filter((point) => point.dateTo && new Date(point.dateTo) < now);
       default:
         return [...this.#points];
     }
