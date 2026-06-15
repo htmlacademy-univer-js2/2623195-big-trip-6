@@ -1,7 +1,9 @@
+import he from 'he';
 import AbstractStatefulView from '../framework/view/abstract-stateful-view.js';
 import {humanizePointDate, humanizePointTime} from '../utils.js';
 import flatpickr from 'flatpickr';
 import 'flatpickr/dist/flatpickr.min.css';
+import { isEscEvent, findDestinationById } from '../common.js';
 
 const BLANK_POINT = {
   id: null,
@@ -56,7 +58,7 @@ export default class EditFormView extends AbstractStatefulView {
 
   #createTemplate(state) {
     const {type, destination: destinationId, dateFrom, dateTo, basePrice, offers: selectedOffers} = state;
-    const destinationObj = this.#destinations.find((d) => d.id === destinationId);
+    const destinationObj = findDestinationById(this.#destinations, destinationId);
     const destinationName = destinationObj ? destinationObj.name : '';
 
     const dateFromFormatted = dateFrom ? humanizePointDate(dateFrom) : '';
@@ -78,7 +80,7 @@ export default class EditFormView extends AbstractStatefulView {
         <label class="event__label event__type-output" for="event-destination-1">
           ${type}
         </label>
-        <input class="event__input event__input--destination" id="event-destination-1" type="text" name="event-destination" value="${destinationName || ''}" list="destination-list-1" autocomplete="off">
+        <input class="event__input event__input--destination" id="event-destination-1" type="text" name="event-destination" value="${he.encode(destinationName || '')}" list="destination-list-1" autocomplete="off">
         <datalist id="destination-list-1">
           ${options}
         </datalist>
@@ -94,7 +96,7 @@ export default class EditFormView extends AbstractStatefulView {
             <div class="event__offer-selector">
               <input class="event__offer-checkbox visually-hidden" id="event-offer-${offer.id}-1" type="checkbox" name="event-offer-${offer.id}" ${selectedOffers.includes(offer.id) ? 'checked' : ''}>
               <label class="event__offer-label" for="event-offer-${offer.id}-1">
-                <span class="event__offer-title">${offer.title}</span>
+                <span class="event__offer-title">${he.encode(offer.title)}</span>
                 &plus;&euro;&nbsp;
                 <span class="event__offer-price">${offer.price}</span>
               </label>
@@ -111,7 +113,7 @@ export default class EditFormView extends AbstractStatefulView {
       destinationDetailsTemplate = `
         <section class="event__section event__section--destination">
           <h3 class="event__section-title event__section-title--destination">Destination</h3>
-          ${destinationObj?.description ? `<p class="event__destination-description">${destinationObj.description}</p>` : ''}
+          ${destinationObj?.description ? `<p class="event__destination-description">${he.encode(destinationObj.description)}</p>` : ''}
           ${hasPhotos ? `
             <div class="event__photos-container">
               <div class="event__photos-tape">
@@ -280,7 +282,9 @@ export default class EditFormView extends AbstractStatefulView {
           updatedOffers = updatedOffers.filter((id) => id !== offerId);
         }
 
-        this.updateElement({offers: updatedOffers});
+        this._state.offers = updatedOffers;
+
+        target.checked = updatedOffers.includes(offerId);
       }
     }
   };
@@ -307,7 +311,7 @@ export default class EditFormView extends AbstractStatefulView {
   };
 
   #escKeyHandler = (evt) => {
-    if (evt.key === 'Escape' || evt.key === 'Esc') {
+    if (isEscEvent(evt)) {
       evt.preventDefault();
       if (this._callbacks.escKey) {
         this._callbacks.escKey();
@@ -330,8 +334,8 @@ export default class EditFormView extends AbstractStatefulView {
 
     const destinationInput = this.element.querySelector('.event__input--destination');
     if (destinationInput) {
-      destinationInput.removeEventListener('change', this.#destinationInputHandler);
-      destinationInput.addEventListener('change', this.#destinationInputHandler);
+      destinationInput.removeEventListener('input', this.#destinationInputHandler);
+      destinationInput.addEventListener('input', this.#destinationInputHandler);
     }
 
     const priceInput = this.element.querySelector('.event__input--price');
@@ -379,12 +383,14 @@ export default class EditFormView extends AbstractStatefulView {
     document.addEventListener('keydown', this.#escKeyHandler);
   }
 
+  /*
   setFocus() {
     const destinationInput = this.element.querySelector('.event__input--destination');
     if (destinationInput) {
       destinationInput.focus();
     }
   }
+  */
 
   removeEscKeyHandler() {
     document.removeEventListener('keydown', this.#escKeyHandler);
@@ -415,6 +421,7 @@ export default class EditFormView extends AbstractStatefulView {
     if (point.dateTo) {
       dateTo = point.dateTo instanceof Date ? point.dateTo : new Date(point.dateTo);
     }
+
 
     return {
       id: point.id,

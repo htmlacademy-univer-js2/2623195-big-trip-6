@@ -6,7 +6,10 @@ import PointsApiService from './api/points-api-service.js';
 import TripInfoView from './view/trip-info-view.js';
 import { render } from './framework/render.js';
 
-const generateRandomString = () => Math.random().toString(36).substring(2, 15);
+const RADIX = 36;
+const RANDOM_STRING_START = 2;
+const RANDOM_STRING_END = 15;
+const generateRandomString = () => Math.random().toString(RADIX).substring(RANDOM_STRING_START, RANDOM_STRING_END);
 const AUTHORIZATION = `Basic ${generateRandomString()}`;
 const END_POINT = 'https://23.objects.htmlacademy.pro/big-trip';
 

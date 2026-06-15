@@ -51,9 +51,7 @@ export default class TripPresenter {
 
     this.#renderBoard();
 
-    setTimeout(() => {
-      this.#openCreateForm();
-    }, 100);
+    this.#openCreateForm();
   }
 
   #openCreateForm() {

@@ -1,15 +1,20 @@
+import he from 'he';
 import AbstractView from '../framework/view/abstract-view.js';
 
-function createTripInfoTemplate(destinations, dateFrom, dateTo, totalPrice) {
+const ONE_DESTINATION = 1;
+const TWO_DESTINATIONS = 2;
+const THREE_DESTINATIONS = 3;
+const DESTINATIONS_LIMIT = 3;
 
+function createTripInfoTemplate(destinations, dateFrom, dateTo, totalPrice) {
   let routeText = '';
-  if (destinations.length === 1) {
+  if (destinations.length === ONE_DESTINATION) {
     routeText = destinations[0];
-  } else if (destinations.length === 2) {
+  } else if (destinations.length === TWO_DESTINATIONS) {
     routeText = `${destinations[0]} — ${destinations[1]}`;
-  } else if (destinations.length === 3) {
+  } else if (destinations.length === THREE_DESTINATIONS) {
     routeText = `${destinations[0]} — ${destinations[1]} — ${destinations[2]}`;
-  } else if (destinations.length > 3) {
+  } else if (destinations.length > DESTINATIONS_LIMIT) {
     routeText = `${destinations[0]} — ... — ${destinations[destinations.length - 1]}`;
   }
 
@@ -28,8 +33,10 @@ function createTripInfoTemplate(destinations, dateFrom, dateTo, totalPrice) {
 
   return `
     <div class="trip-info">
-      <h1 class="trip-info__title">${routeText}</h1>
-      <p class="trip-info__dates">${formatDateRange(dateFrom, dateTo)}</p>
+      <div class="trip-info__main">
+        <h1 class="trip-info__title">${he.encode(routeText)}</h1>
+        <p class="trip-info__dates">${formatDateRange(dateFrom, dateTo)}</p>
+      </div>
       <p class="trip-info__cost">€ <span class="trip-info__cost-value">${totalPrice}</span></p>
     </div>
   `;

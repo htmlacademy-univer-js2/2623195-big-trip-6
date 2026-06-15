@@ -3,14 +3,6 @@ import dayjs from 'dayjs';
 const DATE_FORMAT = 'MMM D';
 const TIME_FORMAT = 'HH:mm';
 
-function getRandomArrayElement(items) {
-  return items[Math.floor(Math.random() * items.length)];
-}
-
-function getRandomInteger(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
 function humanizePointDate(date) {
   if (!date) {
     return '';
@@ -42,51 +34,21 @@ function getDuration(dateFrom, dateTo) {
     return `${totalMinutes}M`;
   }
 
-  let durationString = '';
-
   if (totalMinutes < 1440) {
     const hoursUnderDay = Math.floor(totalMinutes / 60);
     const minutesUnderDay = totalMinutes % 60;
-    durationString = `${formatTimePart(hoursUnderDay)}H ${formatTimePart(minutesUnderDay)}M`;
-  } else {
-    const daysOver = Math.floor(totalMinutes / 1440);
-    const remainingMinutes = totalMinutes % 1440;
-    const hoursOver = Math.floor(remainingMinutes / 60);
-    const minutesOver = remainingMinutes % 60;
-    durationString = `${formatTimePart(daysOver)}D ${formatTimePart(hoursOver)}H ${formatTimePart(minutesOver)}M`;
+    return `${formatTimePart(hoursUnderDay)}H ${formatTimePart(minutesUnderDay)}M`;
   }
 
-  return durationString;
-}
-
-function isPointFuture(dateFrom) {
-  if (!dateFrom) {
-    return false;
-  }
-  return dayjs().isBefore(dateFrom);
-}
-
-function isPointPast(dateTo) {
-  if (!dateTo) {
-    return false;
-  }
-  return dayjs().isAfter(dateTo);
-}
-
-function isPointPresent(dateFrom, dateTo) {
-  if (!dateFrom || !dateTo) {
-    return false;
-  }
-  return dayjs().isAfter(dateFrom) && dayjs().isBefore(dateTo);
+  const daysOver = Math.floor(totalMinutes / 1440);
+  const remainingMinutes = totalMinutes % 1440;
+  const hoursOver = Math.floor(remainingMinutes / 60);
+  const minutesOver = remainingMinutes % 60;
+  return `${formatTimePart(daysOver)}D ${formatTimePart(hoursOver)}H ${formatTimePart(minutesOver)}M`;
 }
 
 export {
-  getRandomArrayElement,
-  getRandomInteger,
   humanizePointDate,
   humanizePointTime,
-  getDuration,
-  isPointFuture,
-  isPointPast,
-  isPointPresent
+  getDuration
 };

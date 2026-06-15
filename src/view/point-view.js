@@ -1,3 +1,4 @@
+import he from 'he';
 import AbstractView from '../framework/view/abstract-view.js';
 import {humanizePointDate, humanizePointTime, getDuration} from '../utils.js';
 
@@ -25,7 +26,7 @@ export default class RoutePointView extends AbstractView {
       .filter((offer) => selectedOfferIds && selectedOfferIds.includes(offer.id))
       .map((offer) => `
         <li class="event__offer">
-          <span class="event__offer-title">${offer.title}</span>
+          <span class="event__offer-title">${he.encode(offer.title)}</span>
           &plus;&euro;&nbsp;
           <span class="event__offer-price">${offer.price}</span>
         </li>
@@ -40,7 +41,7 @@ export default class RoutePointView extends AbstractView {
           <div class="event__type">
             <img class="event__type-icon" width="42" height="42" src="img/icons/${type}.png" alt="Event type icon">
           </div>
-          <h3 class="event__title">${type} ${destinationName}</h3>
+          <h3 class="event__title">${he.encode(type)} ${he.encode(destinationName)}</h3>
           <div class="event__schedule">
             <p class="event__time">
               <time class="event__start-time" datetime="${dateFrom}">${startTime}</time>
@@ -92,4 +93,3 @@ export default class RoutePointView extends AbstractView {
     this._callbacks.favoriteClick?.();
   };
 }
-

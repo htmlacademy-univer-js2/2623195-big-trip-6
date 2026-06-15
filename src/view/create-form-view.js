@@ -1,5 +1,6 @@
 import AbstractStatefulView from '../framework/view/abstract-stateful-view.js';
 import {humanizePointDate, humanizePointTime} from '../utils.js';
+import { isEscEvent, findDestinationById } from '../common.js';
 
 const BLANK_POINT = {
   type: 'flight',
@@ -53,7 +54,7 @@ export default class CreateFormView extends AbstractStatefulView {
 
   #createTemplate() {
     const {type, destination: destinationId, dateFrom, dateTo, basePrice, offers: selectedOffers} = this._state;
-    const destinationObj = this.#destinations.find((d) => d.id === destinationId);
+    const destinationObj = findDestinationById(this.#destinations, destinationId);
     const destinationName = destinationObj ? destinationObj.name : '';
 
     const dateFromFormatted = humanizePointDate(dateFrom);
@@ -62,14 +63,14 @@ export default class CreateFormView extends AbstractStatefulView {
     const timeToFormatted = humanizePointTime(dateTo);
 
     const types = ['taxi', 'bus', 'train', 'ship', 'drive', 'flight', 'check-in', 'sightseeing', 'restaurant'];
-    const typeTemplate = types.map((t) => `
+    const typeTemplate = types.map((typeName) => `
       <div class="event__type-item">
-        <input id="event-type-${t}-2" class="event__type-input visually-hidden" type="radio" name="event-type" value="${t}" ${t === type ? 'checked' : ''}>
-        <label class="event__type-label event__type-label--${t}" for="event-type-${t}-2">${t.charAt(0).toUpperCase() + t.slice(1)}</label>
+        <input id="event-type-${typeName}-2" class="event__type-input visually-hidden" type="radio" name="event-type" value="${typeName}" ${typeName === type ? 'checked' : ''}>
+        <label class="event__type-label event__type-label--${typeName}" for="event-type-${typeName}-2">${typeName.charAt(0).toUpperCase() + typeName.slice(1)}</label>
       </div>
     `).join('');
 
-    const options = this.#destinations.map((dest) => `<option value="${dest.name}"></option>`).join('');
+    const options = this.#destinations.map((destination) => `<option value="${destination.name}"></option>`).join('');
     const destinationTemplate = `
       <div class="event__field-group event__field-group--destination">
         <label class="event__label event__type-output" for="event-destination-2">
@@ -107,8 +108,8 @@ export default class CreateFormView extends AbstractStatefulView {
         <p class="event__destination-description">${destinationObj.description}</p>
         <div class="event__photos-container">
           <div class="event__photos-tape">
-            ${destinationObj.pictures.map((pic) => `
-              <img class="event__photo" src="${pic.src}" alt="${pic.description}">
+            ${destinationObj.pictures.map((picture) => `
+              <img class="event__photo" src="${picture.src}" alt="${picture.description}">
             `).join('')}
           </div>
         </div>
@@ -185,8 +186,8 @@ export default class CreateFormView extends AbstractStatefulView {
     }
   }
 
-  #typeChangeHandler = (evt) => {
-    const newType = evt.target.value;
+  #typeChangeHandler = (event) => {
+    const newType = event.target.value;
     if (newType !== this._state.type) {
       this.updateElement({
         type: newType,
@@ -195,9 +196,9 @@ export default class CreateFormView extends AbstractStatefulView {
     }
   };
 
-  #destinationChangeHandler = (evt) => {
-    const selectedCity = evt.target.value;
-    const destination = this.#destinations.find((d) => d.name === selectedCity);
+  #destinationChangeHandler = (event) => {
+    const selectedCity = event.target.value;
+    const destination = this.#destinations.find((dest) => dest.name === selectedCity);
     if (destination && destination.id !== this._state.destination) {
       this.updateElement({
         destination: destination.id
@@ -205,8 +206,8 @@ export default class CreateFormView extends AbstractStatefulView {
     }
   };
 
-  #priceChangeHandler = (evt) => {
-    const newPrice = parseInt(evt.target.value, 10);
+  #priceChangeHandler = (event) => {
+    const newPrice = parseInt(event.target.value, 10);
     if (!isNaN(newPrice) && newPrice !== this._state.basePrice) {
       this.updateElement({
         basePrice: newPrice
@@ -214,12 +215,12 @@ export default class CreateFormView extends AbstractStatefulView {
     }
   };
 
-  #offersChangeHandler = (evt) => {
-    if (evt.target.classList.contains('event__offer-checkbox')) {
-      const offerId = evt.target.id.replace('event-offer-', '').replace('-2', '');
+  #offersChangeHandler = (event) => {
+    if (event.target.classList.contains('event__offer-checkbox')) {
+      const offerId = event.target.id.replace('event-offer-', '').replace('-2', '');
       let updatedOffers = [...this._state.offers];
 
-      if (evt.target.checked) {
+      if (event.target.checked) {
         if (!updatedOffers.includes(offerId)) {
           updatedOffers.push(offerId);
         }
@@ -270,18 +271,18 @@ export default class CreateFormView extends AbstractStatefulView {
     document.removeEventListener('keydown', this.#escKeyHandler);
   }
 
-  #submitHandler = (evt) => {
-    evt.preventDefault();
+  #submitHandler = (event) => {
+    event.preventDefault();
     this._callbacks.submit?.(this.#stateToPoint());
   };
 
-  #cancelHandler = (evt) => {
-    evt.preventDefault();
+  #cancelHandler = (event) => {
+    event.preventDefault();
     this._callbacks.cancel?.();
   };
 
   #escKeyHandler = (evt) => {
-    if (evt.key === 'Escape' || evt.key === 'Esc') {
+    if (isEscEvent(evt)) {
       evt.preventDefault();
       this._callbacks.escKey?.();
     }

@@ -34,7 +34,6 @@ export default class PointPresenter {
     if (this.#isNewPoint) {
       render(this.#editFormComponent, this.#container);
       this.#isEditFormOpen = true;
-      this.#editFormComponent.setFocus();
     } else {
       render(this.#pointComponent, this.#container);
     }
@@ -187,6 +186,11 @@ export default class PointPresenter {
 
       if (this.#isNewPoint) {
         this.destroy();
+        const newEventButton = document.querySelector('.trip-main__event-add-btn');
+        if (newEventButton) {
+          newEventButton.disabled = false;
+        }
+        this.#handleModeChange();
         return;
       }
 
@@ -255,11 +259,9 @@ export default class PointPresenter {
     if (this.#editFormComponent && this.#pointComponent && this.#pointComponent.element.parentElement) {
       replace(this.#editFormComponent, this.#pointComponent);
       this.#isEditFormOpen = true;
-      this.#editFormComponent.setFocus();
     } else {
       render(this.#editFormComponent, this.#container);
       this.#isEditFormOpen = true;
-      this.#editFormComponent.setFocus();
     }
   }
 

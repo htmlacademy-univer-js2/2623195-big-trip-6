@@ -56,6 +56,11 @@ export default class NewPointPresenter {
     remove(this.#editFormComponent);
     this.#editFormComponent = null;
     document.removeEventListener('keydown', this.#escKeyDownHandler);
+
+    const newEventButton = document.querySelector('.trip-main__event-add-btn');
+    if (newEventButton) {
+      newEventButton.disabled = false;
+    }
   }
 
   #handleFormSubmit = (point) => {
